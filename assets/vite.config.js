@@ -10,13 +10,5 @@ export default defineConfig({
     rollupOptions: {
       input: './index.html'
     }
-  },
-  server: {
-    port: 5173,
-    strictPort: true,
-    hmr: {
-      host: 'localhost',
-      port: 5173
-    }
   }
 })
