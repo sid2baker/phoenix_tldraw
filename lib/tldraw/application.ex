@@ -11,14 +11,11 @@ defmodule Tldraw.Application do
       TldrawWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:tldraw, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Tldraw.PubSub},
-      # Start a worker by calling: Tldraw.Worker.start_link(arg)
-      # {Tldraw.Worker, arg},
-      # Start to serve requests, typically the last entry
+      {Registry, keys: :unique, name: Tldraw.Sync.RoomRegistry},
+      Tldraw.Sync.RoomSupervisor,
       TldrawWeb.Endpoint
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Tldraw.Supervisor]
     Supervisor.start_link(children, opts)
   end

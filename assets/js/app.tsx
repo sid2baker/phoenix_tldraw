@@ -1,34 +1,50 @@
 import { createRoot } from 'react-dom/client'
-import { useCallback, useEffect, useState } from 'react'
-import { Editor, TLEventMapHandler, Tldraw } from 'tldraw'
+import { Tldraw } from 'tldraw'
+import { useSync } from '@tldraw/sync'
 import 'tldraw/tldraw.css'
 
+// Generate or retrieve session ID
+const SESSION_ID = 'default-session'
+
 function App() {
-  const [editor, setEditor] = useState<Editor>()
+  const store = useSync({
+    uri: `ws://localhost:4000/sync/${SESSION_ID}`,
+  })
 
-	const setAppToState = useCallback((editor: Editor) => {
-		setEditor(editor)
-	}, [])
+  if (store.status === 'loading') {
+    return (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        Connecting to sync server...
+      </div>
+    )
+  }
 
-	const [storeEvents, setStoreEvents] = useState<string[]>([])
-
-	useEffect(() => {
-		if (!editor) return
-
-		const handleChangeEvent: TLEventMapHandler<'change'> = (change) => {
-		  console.log(change)
-		}
-
-		const cleanupFunction = editor.store.listen(handleChangeEvent, { source: 'user', scope: 'all' })
-
-		return () => {
-			cleanupFunction()
-		}
-	}, [editor])
+  if (store.status === 'error') {
+    return (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
+        <div>Failed to connect: {store.error?.message}</div>
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    )
+  }
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
-      <Tldraw onMount={setAppToState} />
+      <Tldraw store={store.store} />
     </div>
   )
 }

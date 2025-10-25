@@ -11,10 +11,6 @@ defmodule TldrawWeb.Endpoint do
     same_site: "Lax"
   ]
 
-  # socket "/live", Phoenix.LiveView.Socket,
-  #   websocket: [connect_info: [session: @session_options]],
-  #   longpoll: [connect_info: [session: @session_options]]
-
   # Serve at "/" the static files from "priv/static" directory.
   #
   # When code reloading is disabled (e.g., in production),
@@ -26,6 +22,11 @@ defmodule TldrawWeb.Endpoint do
     gzip: not code_reloading?,
     only: TldrawWeb.static_paths()
 
+  # Tidewave AI coding agent (only in dev)
+  if Code.ensure_loaded?(Tidewave) do
+    plug Tidewave
+  end
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
@@ -33,6 +34,9 @@ defmodule TldrawWeb.Endpoint do
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader
   end
+
+  # WebSocket upgrade for tldraw sync (must be before router)
+  plug TldrawWeb.Plugs.SyncWebSocketPlug
 
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
