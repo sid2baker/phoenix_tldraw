@@ -40,6 +40,7 @@ defmodule Tldraw.MixProject do
   defp deps do
     [
       {:phoenix, "~> 1.8.1"},
+      {:phoenix_live_reload, "~> 1.5", only: :dev},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},

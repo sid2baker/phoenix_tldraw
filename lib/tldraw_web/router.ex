@@ -1,11 +1,8 @@
 defmodule TldrawWeb.Router do
-  use TldrawWeb, :router
+  use Phoenix.Router
 
-  pipeline :api do
-    plug :accepts, ["json"]
-  end
+  import Plug.Conn
 
-  scope "/api", TldrawWeb do
-    pipe_through :api
-  end
+  # Serve the SPA for all routes - client-side router handles navigation
+  get "/*path", TldrawWeb.Plugs.ServeSPA, []
 end

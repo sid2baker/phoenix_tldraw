@@ -25,3 +25,5 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 tldraw-*.tar
 
+# Ignore node_modules directory
+/assets/node_modules/
