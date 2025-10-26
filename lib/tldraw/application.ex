@@ -13,6 +13,7 @@ defmodule Tldraw.Application do
       {Phoenix.PubSub, name: Tldraw.PubSub},
       {Registry, keys: :unique, name: Tldraw.Sync.RoomRegistry},
       Tldraw.Sync.RoomSupervisor,
+      Tldraw.NodesStore,
       TldrawWeb.Endpoint
     ]
 

@@ -1,24 +1,35 @@
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { Tldraw } from "tldraw";
 import { useSync } from "@tldraw/sync";
 import "tldraw/tldraw.css";
+import "./app.css";
+import Sidebar from "./components/Sidebar";
 
 // Generate or retrieve session ID
 const SESSION_ID = "default-session";
 
-function App() {
+// Build WebSocket URL dynamically for dev and prod
+const getWebSocketUrl = () => {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = window.location.host;
+  return `${protocol}//${host}/sync/${SESSION_ID}`;
+};
+
+const App = () => {
   const store = useSync({
-    uri: `ws://localhost:4000/sync/${SESSION_ID}`,
+    uri: getWebSocketUrl(),
   });
 
   return (
-    <div style={{ position: "fixed", inset: 0 }}>
-      <Tldraw store={store.store} hideUi />
+    <div className="fixed inset-0 flex">
+      <Sidebar />
+      <div className="flex-1 relative">
+        <Tldraw store={store.store} />
+      </div>
     </div>
   );
-}
+};
 
-const container = document.getElementById("app");
-if (!container) throw new Error("Failed to find the app element");
-const root = createRoot(container);
+const root = createRoot(document.getElementById("app")!);
 root.render(<App />);
