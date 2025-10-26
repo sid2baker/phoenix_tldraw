@@ -66,7 +66,13 @@ function Sidebar() {
             {state.nodes.map((node) => (
               <li
                 key={node.id}
-                className="flex items-center justify-between p-3 bg-gray-800 rounded hover:bg-gray-750 transition-colors"
+                draggable
+                onDragStart={(e) => {
+                  // Set as plain text so tldraw's external content handler picks it up
+                  e.dataTransfer.setData("text/plain", JSON.stringify(node));
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
+                className="flex items-center justify-between p-3 bg-gray-800 rounded hover:bg-gray-750 transition-colors cursor-grab active:cursor-grabbing"
               >
                 <div className="flex-1">
                   <div className="font-medium">{node.name}</div>
