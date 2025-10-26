@@ -15,7 +15,7 @@ export default defineConfig(({ command }) => {
   }
 
   return {
-    plugins: [react(), tidewave(), tailwindcss()],
+    plugins: [react(), tailwindcss()],
     server: {
       port: 5173,
       strictPort: true,
@@ -23,6 +23,9 @@ export default defineConfig(({ command }) => {
       cors: true,
       proxy: {
         // Proxy WebSocket and API requests to Phoenix
+        "/tidewave": {
+          target: "http://localhost:4000",
+        },
         "/sync": {
           target: "http://localhost:4000",
           changeOrigin: true,
