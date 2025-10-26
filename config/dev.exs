@@ -15,7 +15,7 @@ config :tldraw, TldrawWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "Wcl4Fe6LuE9CUyVeRpPjgkl4Lrb5QfQaTwhOQmVDfP6BsoyK64zK/2VFmgrwqL2K",
   watchers: [
-    npm: ["run", "build", "--", "--watch", cd: Path.expand("../assets", __DIR__)]
+    npm: ["run", "dev", cd: Path.expand("../assets", __DIR__)]
   ],
   live_reload: [
     patterns: [
