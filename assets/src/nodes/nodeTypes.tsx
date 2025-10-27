@@ -7,12 +7,7 @@ import {
 import { PortId, ShapePort } from "../ports/Port";
 import { NodeShape } from "./NodeShapeUtil";
 import { ProcessNodeDefinition } from "./types/ProcessNode";
-import {
-  ExecutionResult,
-  InfoValues,
-  NodeDefinition,
-  NodeDefinitionConstructor,
-} from "./types/shared";
+import { NodeDefinition, NodeDefinitionConstructor } from "./types/ProcessNode";
 
 /** All our node types */
 export const NodeDefinitions = {
@@ -86,30 +81,6 @@ export function getNodeTypePorts(
   return getNodeDefinition(editor, shape.props.node).getPorts(
     shape,
     shape.props.node,
-  );
-}
-
-export async function executeNode(
-  editor: Editor,
-  shape: NodeShape,
-  inputs: Record<string, number>,
-): Promise<ExecutionResult> {
-  return await getNodeDefinition(editor, shape.props.node).execute(
-    shape,
-    shape.props.node,
-    inputs,
-  );
-}
-
-export function getNodeOutputInfo(
-  editor: Editor,
-  shape: NodeShape,
-  inputs: InfoValues,
-): InfoValues {
-  return getNodeDefinition(editor, shape.props.node).getOutputInfo(
-    shape,
-    shape.props.node,
-    inputs,
   );
 }
 

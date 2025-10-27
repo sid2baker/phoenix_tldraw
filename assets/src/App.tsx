@@ -120,7 +120,6 @@ function App() {
           name: config.name,
           properties: config.properties,
         },
-        isOutOfDate: true,
       },
     });
 

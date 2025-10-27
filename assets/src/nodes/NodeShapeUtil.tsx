@@ -12,37 +12,30 @@ import {
   TLResizeInfo,
   useEditor,
   useUniqueSafeId,
-  useValue,
 } from "tldraw";
 import { NODE_WIDTH_PX, PORT_RADIUS_PX } from "../constants";
 import { Port, ShapePort } from "../ports/Port";
-import { getNodeOutputPortInfo, getNodePorts } from "./nodePorts";
+import { getNodePorts } from "./nodePorts";
 import {
   getNodeDefinition,
   getNodeHeightPx,
   NodeBody,
   NodeType,
 } from "./nodeTypes";
-import { NodeValue, STOP_EXECUTION } from "./types/shared";
 
 // Define our custom node shape type that extends tldraw's base shape system
-export type NodeShape = TLBaseShape<
-  "node",
-  { node: NodeType; isOutOfDate: boolean }
->;
+export type NodeShape = TLBaseShape<"node", { node: NodeType }>;
 
 // This class extends tldraw's ShapeUtil to define how our custom node shapes behave
 export class NodeShapeUtil extends ShapeUtil<NodeShape> {
   static override type = "node" as const;
   static override props: RecordProps<NodeShape> = {
     node: NodeType,
-    isOutOfDate: T.boolean,
   };
 
   getDefaultProps(): NodeShape["props"] {
     return {
       node: getNodeDefinition(this.editor, "process").getDefault(),
-      isOutOfDate: false,
     };
   }
 
@@ -165,32 +158,8 @@ function NodeShapeIndicator({
 function NodeShape({ shape }: { shape: NodeShape }) {
   const editor = useEditor();
 
-  // Get the node's output value
-  const output = useValue(
-    "output",
-    () => getNodeOutputPortInfo(editor, shape.id)?.output ?? undefined,
-    [editor, shape.id],
-  );
-
-  const nodeDefinition = getNodeDefinition(editor, shape.props.node);
-
   return (
     <HTMLContainer className={classNames("NodeShape", "NodeShape--editable")}>
-      <div className="NodeShape-heading">
-        <div className="NodeShape-label">
-          {nodeDefinition.heading ?? nodeDefinition.title}
-        </div>
-        {output !== undefined && (
-          <>
-            <div className="NodeShape-output">
-              <NodeValue
-                value={output.isOutOfDate ? STOP_EXECUTION : output.value}
-              />
-            </div>
-            <Port shapeId={shape.id} portId="output" />
-          </>
-        )}
-      </div>
       <NodeBody shape={shape} />
     </HTMLContainer>
   );

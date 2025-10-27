@@ -1,22 +1,61 @@
-import { T, useEditor } from "tldraw";
+import { Editor, T, TLUiIconJsx } from "tldraw";
 import {
   NODE_HEADER_HEIGHT_PX,
+  NODE_ROW_BOTTOM_PADDING_PX,
   NODE_ROW_HEADER_GAP_PX,
   NODE_ROW_HEIGHT_PX,
   NODE_WIDTH_PX,
 } from "../../constants";
-import { Port, ShapePort } from "../../ports/Port";
+import { Port, PortId, ShapePort } from "../../ports/Port";
 import { NodeShape } from "../NodeShapeUtil";
-import {
-  ExecutionResult,
-  InfoValues,
-  InputValues,
-  NodeComponentProps,
-  NodeDefinition,
-  NodeRow,
-  updateNode,
-  areAnyInputsOutOfDate,
-} from "./shared";
+import { NodeType } from "../nodeTypes";
+
+export interface NodeComponentProps<Node extends { type: string }> {
+  shape: NodeShape;
+  node: Node;
+}
+
+export abstract class NodeDefinition<Node extends { type: string }> {
+  constructor(public readonly editor: Editor) {
+    const ctor = this.constructor as NodeDefinitionConstructor<Node>;
+    this.type = ctor.type;
+    this.validator = ctor.validator;
+  }
+
+  readonly type: Node["type"];
+  readonly validator: T.Validator<Node>;
+  abstract readonly title: string;
+  abstract readonly heading?: string;
+  abstract readonly icon: TLUiIconJsx;
+
+  abstract getDefault(): Node;
+  abstract getBodyHeightPx(shape: NodeShape, node: Node): number;
+  abstract getPorts(shape: NodeShape, node: Node): Record<string, ShapePort>;
+  onPortConnect(_shape: NodeShape, _node: Node, _port: PortId): void {}
+  onPortDisconnect(_shape: NodeShape, _node: Node, _port: PortId): void {}
+  abstract Component: React.ComponentType<NodeComponentProps<Node>>;
+}
+
+export interface NodeDefinitionConstructor<Node extends { type: string }> {
+  new (editor: Editor): NodeDefinition<Node>;
+  readonly type: Node["type"];
+  readonly validator: T.Validator<Node>;
+}
+
+/**
+ * Update the `node` prop within a node shape.
+ */
+export function updateNode<T extends NodeType>(
+  editor: Editor,
+  shape: NodeShape,
+  update: (node: T) => T,
+) {
+  editor.updateShape<NodeShape>({
+    id: shape.id,
+    type: shape.type,
+    props: { node: update(shape.props.node as T) },
+  });
+}
 
 /**
  * A simple Process node with one input and multiple outputs.
@@ -30,7 +69,6 @@ export const ProcessNode = T.object({
   properties: T.object({
     outputCount: T.number,
   }),
-  lastResult: T.number.nullable(),
 });
 
 export class ProcessNodeDefinition extends NodeDefinition<ProcessNode> {
@@ -45,87 +83,63 @@ export class ProcessNodeDefinition extends NodeDefinition<ProcessNode> {
       type: "process",
       name: "Process",
       properties: {
-        outputCount: 2,
+        outputCount: 1,
       },
-      lastResult: null,
     };
   }
 
-  // Fixed height - just shows the node name and status
+  // Minimal height - just enough for a compact node
   getBodyHeightPx(_shape: NodeShape, _node: ProcessNode) {
     return NODE_ROW_HEIGHT_PX;
   }
 
   getPorts(_shape: NodeShape, node: ProcessNode): Record<string, ShapePort> {
+    // Calculate total node height for centering ports
+    const totalHeight =
+      NODE_HEADER_HEIGHT_PX +
+      NODE_ROW_HEADER_GAP_PX +
+      NODE_ROW_HEIGHT_PX +
+      NODE_ROW_BOTTOM_PADDING_PX;
+    const centerY = totalHeight / 2;
+
     const ports: Record<string, ShapePort> = {
-      // Single input port on the left, positioned at the center of the header
+      // Single input port on the left, centered vertically
       input: {
         id: "input",
         x: 0,
-        y: NODE_HEADER_HEIGHT_PX / 2,
+        y: centerY,
         terminal: "end",
       },
     };
 
-    // Multiple output ports on the right
+    // Output ports on the right
     const outputCount = node.properties.outputCount;
-    
-    // Calculate the starting Y position for output ports
-    // They should start after the header and account for the node row content
-    const startY = NODE_HEADER_HEIGHT_PX / 2;
-    
-    for (let i = 0; i < outputCount; i++) {
-      ports[`output_${i}`] = {
-        id: `output_${i}`,
+
+    if (outputCount === 1) {
+      // Single output aligned with input
+      ports.output = {
+        id: "output",
         x: NODE_WIDTH_PX,
-        // Position outputs starting from the same Y as input, distributed vertically
-        y: startY + (i * 16), // Reduced spacing to 16px for better alignment
+        y: centerY,
         terminal: "start",
       };
+    } else {
+      // Multiple outputs distributed vertically
+      const spacing = 20;
+      const totalOutputsHeight = (outputCount - 1) * spacing;
+      const startY = (totalHeight - totalOutputsHeight) / 2;
+
+      for (let i = 0; i < outputCount; i++) {
+        ports[`output_${i}`] = {
+          id: `output_${i}`,
+          x: NODE_WIDTH_PX,
+          y: startY + i * spacing,
+          terminal: "start",
+        };
+      }
     }
 
     return ports;
-  }
-
-  // Simple passthrough for now - just outputs the input value
-  async execute(
-    shape: NodeShape,
-    node: ProcessNode,
-    inputs: InputValues,
-  ): Promise<ExecutionResult> {
-    const inputValue = inputs["input"] ?? 0;
-
-    updateNode<ProcessNode>(this.editor, shape, (node) => ({
-      ...node,
-      lastResult: inputValue,
-    }));
-
-    // Send same value to all outputs
-    const result: ExecutionResult = {};
-    for (let i = 0; i < node.properties.outputCount; i++) {
-      result[`output_${i}`] = inputValue;
-    }
-
-    return result;
-  }
-
-  getOutputInfo(
-    shape: NodeShape,
-    node: ProcessNode,
-    inputs: InfoValues,
-  ): InfoValues {
-    const result: InfoValues = {};
-    const isOutOfDate =
-      areAnyInputsOutOfDate(inputs) || shape.props.isOutOfDate;
-
-    for (let i = 0; i < node.properties.outputCount; i++) {
-      result[`output_${i}`] = {
-        value: node.lastResult ?? 0,
-        isOutOfDate,
-      };
-    }
-
-    return result;
   }
 
   Component = ProcessNodeComponent;
@@ -135,8 +149,6 @@ export function ProcessNodeComponent({
   shape,
   node,
 }: NodeComponentProps<ProcessNode>) {
-  const editor = useEditor();
-
   // Handle double-click to open config panel
   const handleDoubleClick = () => {
     const event = new CustomEvent("nodeDoubleClick", {
@@ -150,22 +162,51 @@ export function ProcessNodeComponent({
     window.dispatchEvent(event);
   };
 
+  const outputCount = node.properties.outputCount;
+
   return (
     <>
       {/* Input port */}
       <Port shapeId={shape.id} portId="input" />
 
-      {/* Node body */}
-      <NodeRow onDoubleClick={handleDoubleClick} style={{ cursor: "pointer" }}>
-        <div style={{ padding: "8px", fontSize: "12px", color: "#666" }}>
-          {node.name}
-        </div>
-      </NodeRow>
+      {/* Node body with name */}
+      <div
+        onDoubleClick={handleDoubleClick}
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: NODE_WIDTH_PX,
+          height:
+            NODE_HEADER_HEIGHT_PX +
+            NODE_ROW_HEADER_GAP_PX +
+            NODE_ROW_HEIGHT_PX +
+            NODE_ROW_BOTTOM_PADDING_PX,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          fontSize: "13px",
+          fontWeight: 500,
+          color: "#374151",
+          backgroundColor: "white",
+          border: "1px solid #d1d5db",
+          borderRadius: "8px",
+          userSelect: "none",
+          boxSizing: "border-box",
+        }}
+      >
+        {node.name}
+      </div>
 
-      {/* Output ports */}
-      {Array.from({ length: node.properties.outputCount }, (_, i) => (
-        <Port key={`output_${i}`} shapeId={shape.id} portId={`output_${i}`} />
-      ))}
+      {/* Output port(s) */}
+      {outputCount === 1 ? (
+        <Port shapeId={shape.id} portId="output" />
+      ) : (
+        Array.from({ length: outputCount }, (_, i) => (
+          <Port key={`output_${i}`} shapeId={shape.id} portId={`output_${i}`} />
+        ))
+      )}
     </>
   );
 }
