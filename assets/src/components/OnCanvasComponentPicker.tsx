@@ -19,8 +19,7 @@ import {
   getConnectionTerminals,
 } from "../connection/ConnectionShapeUtil";
 import { NODE_WIDTH_PX } from "../constants";
-import { getNodeDefinitions, NodeType } from "../nodes/nodeTypes";
-import { NodeDefinition } from "../nodes/types/ProcessNode";
+import { nodeDefs, NodeType } from "../nodes/nodeTypes";
 import { EditorAtom } from "../utils";
 
 export interface OnCanvasComponentPickerState {
@@ -36,7 +35,6 @@ export const onCanvasComponentPickerState =
     () => null,
   );
 
-// Component picker that appears when users drag connection handles without connecting to existing ports
 export function OnCanvasComponentPicker() {
   const editor = useEditor();
   const onClose = useCallback(() => {
@@ -45,15 +43,11 @@ export function OnCanvasComponentPicker() {
     onCanvasComponentPickerState.set(editor, null);
     state.onClose();
   }, [editor]);
-  const nodeDefs = getNodeDefinitions(editor);
 
   return (
     <OnCanvasComponentPickerDialog onClose={onClose}>
       <TldrawUiMenuGroup id="nodes">
-        <OnCanvasComponentPickerItem
-          definition={nodeDefs.process}
-          onClose={onClose}
-        />
+        <OnCanvasComponentPickerItem onClose={onClose} />
       </TldrawUiMenuGroup>
     </OnCanvasComponentPickerDialog>
   );
@@ -144,19 +138,11 @@ function OnCanvasComponentPickerDialog({
   );
 }
 
-// Individual menu item for selecting a node type
-function OnCanvasComponentPickerItem<T extends NodeType>({
-  definition,
-  onClose,
-}: {
-  definition: NodeDefinition<T>;
-  onClose: () => void;
-}) {
+function OnCanvasComponentPickerItem({ onClose }: { onClose: () => void }) {
   const editor = useEditor();
 
   return (
     <TldrawUiButton
-      key={definition.type}
       type="menu"
       className="OnCanvasComponentPicker-button"
       onPointerDown={editor.markEventAsHandled}
@@ -173,26 +159,23 @@ function OnCanvasComponentPickerItem<T extends NodeType>({
           return;
         }
 
-        // Calculate the position where the new node should be created
         const terminals = getConnectionTerminals(editor, connection);
         const terminalInConnectionSpace =
           state.location === "middle"
             ? Vec.Lrp(terminals.start, terminals.end, 0.5)
             : terminals[state.location];
 
-        // Transform from connection space to page space
         const terminalInPageSpace = editor
           .getShapePageTransform(connection)
           .applyToPoint(terminalInConnectionSpace);
 
-        // Call the pick handler with the node type and position
-        state.onPick(definition.getDefault(), terminalInPageSpace);
+        state.onPick(nodeDefs.process.getDefault(), terminalInPageSpace);
 
         onClose();
       }}
     >
-      <TldrawUiButtonIcon icon={definition.icon} />
-      <TldrawUiButtonLabel>{definition.title}</TldrawUiButtonLabel>
+      <TldrawUiButtonIcon icon={nodeDefs.process.icon} />
+      <TldrawUiButtonLabel>{nodeDefs.process.title}</TldrawUiButtonLabel>
     </TldrawUiButton>
   );
 }

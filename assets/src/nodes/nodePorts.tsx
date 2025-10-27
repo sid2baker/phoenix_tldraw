@@ -22,7 +22,7 @@ export function getNodePorts(editor: Editor, shape: NodeShape | TLShapeId) {
 }
 const nodePortsCache = createComputedCache(
   "ports",
-  (editor: Editor, node: NodeShape) => getNodeTypePorts(editor, node),
+  (editor: Editor, node: NodeShape) => getNodeTypePorts(node.props.node),
 );
 
 /**

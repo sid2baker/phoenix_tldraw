@@ -1,4 +1,4 @@
-import { Editor, T, TLUiIconJsx } from "tldraw";
+import { T } from "tldraw";
 import {
   NODE_HEADER_HEIGHT_PX,
   NODE_ROW_BOTTOM_PADDING_PX,
@@ -6,56 +6,8 @@ import {
   NODE_ROW_HEIGHT_PX,
   NODE_WIDTH_PX,
 } from "../../constants";
-import { Port, PortId, ShapePort } from "../../ports/Port";
+import { Port, ShapePort } from "../../ports/Port";
 import { NodeShape } from "../NodeShapeUtil";
-import { NodeType } from "../nodeTypes";
-
-export interface NodeComponentProps<Node extends { type: string }> {
-  shape: NodeShape;
-  node: Node;
-}
-
-export abstract class NodeDefinition<Node extends { type: string }> {
-  constructor(public readonly editor: Editor) {
-    const ctor = this.constructor as NodeDefinitionConstructor<Node>;
-    this.type = ctor.type;
-    this.validator = ctor.validator;
-  }
-
-  readonly type: Node["type"];
-  readonly validator: T.Validator<Node>;
-  abstract readonly title: string;
-  abstract readonly heading?: string;
-  abstract readonly icon: TLUiIconJsx;
-
-  abstract getDefault(): Node;
-  abstract getBodyHeightPx(shape: NodeShape, node: Node): number;
-  abstract getPorts(shape: NodeShape, node: Node): Record<string, ShapePort>;
-  onPortConnect(_shape: NodeShape, _node: Node, _port: PortId): void {}
-  onPortDisconnect(_shape: NodeShape, _node: Node, _port: PortId): void {}
-  abstract Component: React.ComponentType<NodeComponentProps<Node>>;
-}
-
-export interface NodeDefinitionConstructor<Node extends { type: string }> {
-  new (editor: Editor): NodeDefinition<Node>;
-  readonly type: Node["type"];
-  readonly validator: T.Validator<Node>;
-}
-
-/**
- * Update the `node` prop within a node shape.
- */
-export function updateNode<T extends NodeType>(
-  editor: Editor,
-  shape: NodeShape,
-  update: (node: T) => T,
-) {
-  editor.updateShape<NodeShape>({
-    id: shape.id,
-    type: shape.type,
-    props: { node: update(shape.props.node as T) },
-  });
-}
 
 /**
  * A simple Process node with one input and multiple outputs.
@@ -65,18 +17,16 @@ export type ProcessNode = T.TypeOf<typeof ProcessNode>;
 export const ProcessNode = T.object({
   type: T.literal("process"),
   name: T.string,
-  // Custom properties that can be configured
   properties: T.object({
     outputCount: T.number,
   }),
 });
 
-export class ProcessNodeDefinition extends NodeDefinition<ProcessNode> {
-  static type = "process";
-  static validator = ProcessNode;
-  title = "Process";
-  heading = "Process";
-  icon = "⚙️";
+export const processNodeDef = {
+  type: "process" as const,
+  validator: ProcessNode,
+  title: "Process",
+  icon: "⚙️",
 
   getDefault(): ProcessNode {
     return {
@@ -86,15 +36,13 @@ export class ProcessNodeDefinition extends NodeDefinition<ProcessNode> {
         outputCount: 1,
       },
     };
-  }
+  },
 
-  // Minimal height - just enough for a compact node
-  getBodyHeightPx(_shape: NodeShape, _node: ProcessNode) {
+  getBodyHeightPx(_node: ProcessNode): number {
     return NODE_ROW_HEIGHT_PX;
-  }
+  },
 
-  getPorts(_shape: NodeShape, node: ProcessNode): Record<string, ShapePort> {
-    // Calculate total node height for centering ports
+  getPorts(node: ProcessNode): Record<string, ShapePort> {
     const totalHeight =
       NODE_HEADER_HEIGHT_PX +
       NODE_ROW_HEADER_GAP_PX +
@@ -103,28 +51,24 @@ export class ProcessNodeDefinition extends NodeDefinition<ProcessNode> {
     const centerY = totalHeight / 2;
 
     const ports: Record<string, ShapePort> = {
-      // Single input port on the left, centered vertically
       input: {
         id: "input",
         x: 0,
         y: centerY,
-        terminal: "end",
+        terminal: "end" as const,
       },
     };
 
-    // Output ports on the right
     const outputCount = node.properties.outputCount;
 
     if (outputCount === 1) {
-      // Single output aligned with input
       ports.output = {
         id: "output",
         x: NODE_WIDTH_PX,
         y: centerY,
-        terminal: "start",
+        terminal: "start" as const,
       };
     } else {
-      // Multiple outputs distributed vertically
       const spacing = 20;
       const totalOutputsHeight = (outputCount - 1) * spacing;
       const startY = (totalHeight - totalOutputsHeight) / 2;
@@ -134,22 +78,24 @@ export class ProcessNodeDefinition extends NodeDefinition<ProcessNode> {
           id: `output_${i}`,
           x: NODE_WIDTH_PX,
           y: startY + i * spacing,
-          terminal: "start",
+          terminal: "start" as const,
         };
       }
     }
 
     return ports;
-  }
+  },
 
-  Component = ProcessNodeComponent;
-}
+  Component: ProcessNodeComponent,
+};
 
 export function ProcessNodeComponent({
   shape,
   node,
-}: NodeComponentProps<ProcessNode>) {
-  // Handle double-click to open config panel
+}: {
+  shape: NodeShape;
+  node: ProcessNode;
+}) {
   const handleDoubleClick = () => {
     const event = new CustomEvent("nodeDoubleClick", {
       detail: {
@@ -166,10 +112,8 @@ export function ProcessNodeComponent({
 
   return (
     <>
-      {/* Input port */}
       <Port shapeId={shape.id} portId="input" />
 
-      {/* Node body with name */}
       <div
         onDoubleClick={handleDoubleClick}
         style={{
@@ -199,7 +143,6 @@ export function ProcessNodeComponent({
         {node.name}
       </div>
 
-      {/* Output port(s) */}
       {outputCount === 1 ? (
         <Port shapeId={shape.id} portId="output" />
       ) : (

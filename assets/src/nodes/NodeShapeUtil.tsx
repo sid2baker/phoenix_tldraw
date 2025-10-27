@@ -16,17 +16,10 @@ import {
 import { NODE_WIDTH_PX, PORT_RADIUS_PX } from "../constants";
 import { Port, ShapePort } from "../ports/Port";
 import { getNodePorts } from "./nodePorts";
-import {
-  getNodeDefinition,
-  getNodeHeightPx,
-  NodeBody,
-  NodeType,
-} from "./nodeTypes";
+import { getNodeHeightPx, NodeBody, NodeType, nodeDefs } from "./nodeTypes";
 
-// Define our custom node shape type that extends tldraw's base shape system
 export type NodeShape = TLBaseShape<"node", { node: NodeType }>;
 
-// This class extends tldraw's ShapeUtil to define how our custom node shapes behave
 export class NodeShapeUtil extends ShapeUtil<NodeShape> {
   static override type = "node" as const;
   static override props: RecordProps<NodeShape> = {
@@ -35,7 +28,7 @@ export class NodeShapeUtil extends ShapeUtil<NodeShape> {
 
   getDefaultProps(): NodeShape["props"] {
     return {
-      node: getNodeDefinition(this.editor, "process").getDefault(),
+      node: nodeDefs.process.getDefault(),
     };
   }
 
@@ -85,7 +78,7 @@ export class NodeShapeUtil extends ShapeUtil<NodeShape> {
 
     const bodyGeometry = new Rectangle2d({
       width: NODE_WIDTH_PX,
-      height: getNodeHeightPx(this.editor, shape),
+      height: getNodeHeightPx(shape.props.node),
       isFilled: true,
     });
 
@@ -125,7 +118,7 @@ function NodeShapeIndicator({
       <mask id={id}>
         <rect
           width={NODE_WIDTH_PX + 10}
-          height={getNodeHeightPx(editor, shape) + 10}
+          height={getNodeHeightPx(shape.props.node) + 10}
           fill="white"
           x={-5}
           y={-5}
@@ -144,7 +137,7 @@ function NodeShapeIndicator({
       <rect
         rx={9}
         width={NODE_WIDTH_PX}
-        height={getNodeHeightPx(editor, shape)}
+        height={getNodeHeightPx(shape.props.node)}
         mask={`url(#${id})`}
       />
       {ports.map((port) => (
