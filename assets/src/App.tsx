@@ -1,9 +1,8 @@
+import "./index.css";
 import React, { useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { Tldraw, Editor, createShapeId } from "tldraw";
 import { useSync } from "@tldraw/sync";
-import "tldraw/tldraw.css";
-import "./app.css";
 import Sidebar from "./components/Sidebar";
 
 // Generate or retrieve session ID
@@ -98,5 +97,4 @@ const App = () => {
   );
 };
 
-const root = createRoot(document.getElementById("app")!);
-root.render(<App />);
+export default App;
